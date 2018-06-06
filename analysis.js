@@ -1,40 +1,49 @@
-'use strict';
 const Analysis = require('tago/analysis');
 const Utils    = require('tago/utils');
 const Device   = require('tago/device');
 
-/**
- * The function presumes that you have a enviroment variable, that can be set in the admin website, in the Analysis configuration:
- * -> device_token: token
- * It's simple get the variable "water_level", prints it to the console, multiple the value by 2 and insert in a new variable called water_level_double.
- * @param  {object} context automatic received from Tago
- */
-function run_analysis(context) {
-    //Convert the environment variables into an object.
-    //You can do this by yourself, we just added an easily way.
-    const env_vars  = Utils.env_to_obj(context.environment);
+// To run this analysis you need to add a device token to the environment variables,
+// To do that, go to your device, then token and copy your token.
+// Go the the analysis, then environment variables, 
+// add a new one and type device_token on key, and paste your token on value
 
-    const my_device = new Device(env_vars.device_token);
+// This analysis reads the last value of the variable "water_level"
+// then the analysis multiplies the value by two and posts it as water_level_double
 
-    my_device.find({"variable":"water_level", "query":"last_item"}).then((result_array) => {
-        //Check if array isn't empty
-        if (!result_array[0]) return context.log("Empty Array");
+// The function myAnalysis will run when you execute your analysis
+function myAnalysis(context) {
+  // reads the values from the environment and saves it in the variable env_vars
+  const env_vars = Utils.env_to_obj(context.environment);
 
-        //query:last_item always return only one value
-        const value = result_array[0].value;
-        const time = result_array[0].time; //you can format time later
+  const device = new Device(env_vars.device_token);
 
-        //print to console
-        context.log(`The last record of the water_level is ${value}. It was inserted at ${time}`);
+  // create the filter options to get the data from Tago
+  const filter = {
+    variable: 'water_level',
+    query: 'last_item',
+  };
 
-        //Multiple the water_level value by 2 and insert in another variable
-        const obj_to_save = {
-            "variable": "water_level_double",
-            "value": value * 2,
-        };
+  device.find(filter).then((result_array) => {
+    // Check if the array is not empty
+    if (!result_array[0]) return context.log('Empty Array');
 
-        my_device.insert(obj_to_save).then(context.log("Successfully Inserted")).catch(error => context.log("Error when inserting:", error));
+    // query:last_item always returns only one value
+    const value = result_array[0].value;
+    const time = result_array[0].time;
 
-    }).catch(context.log); //just print error
+    // print to the console at Tago
+    context.log(`The last record of the water_level is ${value}. It was inserted at ${time}`);
+
+    // Multiplies the water_level value by 2 and inserts it in another variable
+    const obj_to_save = {
+      variable: 'water_level_double',
+      value: value * 2,
+    };
+
+    device.insert(obj_to_save).then(context.log('Successfully Inserted')).catch(error => context.log('Error when inserting:', error));
+
+  }).catch(context.log); //just prints the error to the console at Tago
 }
-module.exports = new Analysis(run_analysis, 'MY-ANALYSIS-TOKEN-HERE');
+
+// The analysis token in only necessary to run the analysis outside Tago
+module.exports = new Analysis(myAnalysis, 'MY-ANALYSIS-TOKEN-HERE');
